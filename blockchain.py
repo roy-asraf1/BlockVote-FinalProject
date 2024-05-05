@@ -1,15 +1,11 @@
 # Module 1 - Create a Blockchain
-
-# To be installed:
-# Flask==0.12.2: pip install Flask==0.12.2
-# Postman HTTP Client: https://www.getpostman.com/
-
-# Importing the libraries
-import datetime
-import hashlib
-import json
-from flask import Flask, jsonify
-
+import datetime #to get the current time
+import hashlib #to hash the blocks
+import json    #to encode the blocks before hashing
+from flask import Flask, jsonify #to create the web app
+from uuid import uuid4 #to generate a unique address
+from urllib.parse import urlparse #to parse the address of the nodes
+import requests
 # Part 1 - Building a Blockchain
 
 class Blockchain:
@@ -98,6 +94,43 @@ def is_valid():
         response = {'message': 'All good. The Blockchain is valid.'}
     else:
         response = {'message': 'Houston, we have a problem. The Blockchain is not valid.'}
+    return jsonify(response), 200
+# Adding a new transaction to the Blockchain
+@app.route('/add_transaction', methods = ['POST'])
+def add_transaction():
+    json = requests.get_json()
+    transaction_keys = ['sender', 'receiver', 'amount']
+    if not all(key in json for key in transaction_keys):
+        return 'Some elements of the transaction are missing', 400
+    index = blockchain.add_transaction(json['sender'], json['receiver'], json['amount'])
+    response = {'message': f'This transaction will be added to Block {index}'}
+    return jsonify(response), 201
+
+# Part 3 - Decentralizing our Blockchain
+
+# Connecting new nodes
+@app.route('/connect_node', methods = ['POST'])
+def connect_node():
+    json = requests.get_json()
+    nodes = json.get('nodes')
+    if nodes is None:
+        return "No node", 400
+    for node in nodes:
+        blockchain.add_node(node)
+    response = {'message': 'All the nodes are now connected. The Hadcoin Blockchain now contains the following nodes:',
+                'total_nodes': list(blockchain.nodes)}
+    return jsonify(response), 201
+
+# Replacing the chain by the longest chain if needed
+@app.route('/replace_chain', methods = ['GET'])
+def replace_chain():
+    is_chain_replaced = blockchain.replace_chain()
+    if is_chain_replaced:
+        response = {'message': 'The nodes had different chains so the chain was replaced by the longest one.',
+                    'new_chain': blockchain.chain}
+    else:
+        response = {'message': 'All good. The chain is the largest one.',
+                    'actual_chain': blockchain.chain}
     return jsonify(response), 200
 
 # Running the app
