@@ -1,5 +1,5 @@
 {
-    "sender":"",
-    "recipient":"",
-    "amount":5
+    "voter":"", 
+    "candidate":"",
+    "amount":1
 }
