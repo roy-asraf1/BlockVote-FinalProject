@@ -1,4 +1,4 @@
-# Module 1 - Create a Blockchain
+# An electoral system based on blockchain
 import datetime #to get the current time
 import hashlib #to hash the blocks
 import json    #to encode the blocks before hashing
@@ -8,30 +8,42 @@ from urllib.parse import urlparse #to parse the address of the nodes
 import requests
 
 # Part 1 - Building a Blockchain
-ADDRESS= 'http://127.0.0.1:5000' #address of the node
+# ADDRESS= 'http://127.0.0.1:5000' #address of the node
 class Blockchain:
 
     # Constructor
-    def __init__(self): 
+    def __init__(self,description_vote): 
         self.chain = []
         self.transactions =[]
-        self.create_block(proof = 1, previous_hash = '0')
         self.nodes = set()
+        self.description = description_vote
+        self.create_block(proof = 1, previous_hash = '0')
+        
     # Create a block
     def create_block(self, proof, previous_hash):
         block = {'index': len(self.chain) + 1,
                  'timestamp': str(datetime.datetime.now()),
                  'proof': proof,
+                 'votes': self.transactions,
                  'previous_hash': previous_hash,
-                 'transactions' : self.transactions}
+                 'description': self.description}
         self.transactions = []
         self.chain.append(block)
         return block
+    
     #   Get the previous block
     def get_previous_block(self):
         return self.chain[-1]
     
-
+    def add_transaction(self,voter, candidate , amount):
+        self.transactions.append({
+            'voter': voter,
+            'candidate': candidate,
+            'amount': amount
+        })
+        previous_block= self.get_previous_block()
+        return previous_block['index'] +1
+    
     # Proof of work
     def proof_of_work(self, previous_proof):
         new_proof = 1
@@ -47,7 +59,6 @@ class Blockchain:
     def hash(self, block):
         encoded_block = json.dumps(block, sort_keys = True).encode()
         return hashlib.sha256(encoded_block).hexdigest()
-    
     
     # Is the chain valid
     def is_chain_valid(self, chain):
@@ -66,19 +77,11 @@ class Blockchain:
             block_index += 1
         return True
     
-    def add_transaction(self,sender,receiver , amount):
-        self.transactions.append({
-            'sender': sender,
-            'recevier':receiver,
-            'amount': amount
-        })
-        previous_block= self.get_previous_block()
-        return previous_block['index'] +1
     # Add a node
     def add_node(self, address):
-        
         parsed_url = urlparse(address)
         self.nodes.add(parsed_url.netloc)
+        
     #   Replace the chain
     def replace_chain(self):
         network = self.nodes
@@ -96,16 +99,14 @@ class Blockchain:
             self.chain = longest_chain
             return True
         return False
-# Part 2 - Mining our Blockchain
+
 
 # Creating a Web App
 app = Flask(__name__)
-
-# Creating an address for the node on Port 5000
 node_address = str(uuid4()).replace('-', '')
 
-# Creating a Blockchain
-blockchain = Blockchain()
+description_vote = 'Vote for the best candidate'
+blockchain = Blockchain(description_vote)
 
 # Mining a new block
 @app.route('/mine_block', methods = ['GET'])
@@ -114,14 +115,16 @@ def mine_block():
     previous_proof = previous_block['proof'] #get the previous proof
     proof = blockchain.proof_of_work(previous_proof) # get the new proof
     previous_hash = blockchain.hash(previous_block) #get the previous hash
-    blockchain.add_transaction(sender=node_address, receiver='Ace', amount=1) #add a transaction
+    blockchain.add_transaction(voter=node_address, candidate='roni', amount=1) #add a transaction
     block = blockchain.create_block(proof, previous_hash) #create a new block
     response = {'message': 'Congratulations, you just mined a block!',
                 'index': block['index'],
                 'timestamp': block['timestamp'],
                 'proof': block['proof'],
+                'votes': block['votes'],
                 'previous_hash': block['previous_hash'],
-                'transactions': block['transactions']}
+                'description': block['description']
+                }
     return jsonify(response), 200
 
 # Getting the full Blockchain
@@ -138,16 +141,16 @@ def is_valid():
     if is_valid:
         response = {'message': 'All good. The Blockchain is valid.'}
     else:
-        response = {'message': 'Houston, we have a problem. The Blockchain is not valid.'}
+        response = {'message': ' The Blockchain is not valid.'}
     return jsonify(response), 200
 
 @app.route('/add_transaction', methods = ['POST']) 
 def add_transaction(): #add a transaction
     json = request.get_json() #get the json file
-    transaction_keys = ['sender', 'receiver', 'amount'] #keys of the transaction
+    transaction_keys = ['voter', 'candidate', 'amount'] #keys of the transaction
     if not all (key in json for key in transaction_keys): #check if all the keys are present
         return 'Some elements of the transaction are missing', 400 #400 is the status code for bad request (in http)
-    index = blockchain.add_transaction(json['sender'], json['receiver'], json['amount']) #add the transaction
+    index = blockchain.add_transaction(json['voter'],json['candidate'], json['amount']) #add the transaction
     response = {'message': f'This transaction will be added to Block {index}'} #f is for formatting
     return jsonify(response), 201  #201 is the status code for created (in http)
 
@@ -161,7 +164,7 @@ def connect_node():
         return "No node", 400 #400 is the status code for bad request (in http)
     for node in nodes:
         blockchain.add_node(node) #add the node
-    response = {'message': 'All the nodes are now connected. The AceCoin Blockchain now contains the following nodes:',
+    response = {'message': 'All the nodes are now connected. The Blockvote now contains the following nodes:',
                 'total_nodes': list(blockchain.nodes)} #list of the nodes
     return jsonify(response), 201 #201 is the status code for created (in http)
 
@@ -177,5 +180,6 @@ def replace_chain():
                     'actual_chain': blockchain.chain} #actual chain
     return jsonify(response), 200 #200 is the status code for ok (in http)
 
+
 # Running the app
-app.run(host = '0.0.0.0', port = 5000)
+app.run(host = '0.0.0.0', port = 5001)
