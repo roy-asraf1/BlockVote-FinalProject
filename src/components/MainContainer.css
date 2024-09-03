@@ -1,0 +1,39 @@
+.MainContainer {
+    text-align: left;
+  }
+  
+  .MainContainer-logo {
+    height: 50vmin;
+    pointer-events: auto;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .MainContainer-logo {
+      animation: LogoRotation infinite 15s linear;
+    }
+  }
+  
+  .MainContainer-header {
+    background-color: #1c2331;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-around;
+    font-size: calc(12px + 3vmin);
+    color: #f1f1f1;
+  }
+  
+  .MainContainer-link {
+    color: #ff6f61;
+  }
+  
+  @keyframes LogoRotation {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(180deg);
+    }
+  }
+  
